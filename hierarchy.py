@@ -1,6 +1,7 @@
 import os
 import sys
 import fnmatch
+import argparse
 
 def generate_tree(startpath, exclude_dirs=None, exclude_patterns=None):
     if exclude_dirs is None:
@@ -10,7 +11,7 @@ def generate_tree(startpath, exclude_dirs=None, exclude_patterns=None):
 
     tree = []
     for root, dirs, files in os.walk(startpath):
-        dirs[:] = [d for d in dirs if d not in exclude_dirs]
+        dirs[:] = [d for d in dirs if d not in exclude_dirs and not any(fnmatch.fnmatch(d, pattern) for pattern in exclude_patterns)]
         level = root.replace(startpath, '').count(os.sep)
         indent = '│   ' * (level - 1) + '├── ' if level > 0 else ''
         tree.append(f"{indent}{os.path.basename(root)}/")
@@ -21,15 +22,17 @@ def generate_tree(startpath, exclude_dirs=None, exclude_patterns=None):
     return '\n'.join(tree)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <path_to_project_root> [output_file_suffix]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Generate a file hierarchy tree.")
+    parser.add_argument("project_root", help="Path to the project root")
+    parser.add_argument("-o", "--output", help="Suffix for output file name")
+    parser.add_argument("-d", "--exclude-dirs", nargs="*", default=[], help="Additional directories to exclude (exact names)")
+    parser.add_argument("-p", "--exclude-patterns", nargs="*", default=[], help="Patterns to exclude (can match both files and directories)")
+    args = parser.parse_args()
 
-    project_root = sys.argv[1]
+    project_root = args.project_root
+    output_suffix = f"_{args.output}" if args.output else ""
     
-    # Check if an output file suffix was provided
-    output_suffix = f"_{sys.argv[2]}" if len(sys.argv) > 2 else ""
-    
+    # Predefined exclusions
     exclude_dirs = {'.git', '.vscode', '__pycache__', 'node_modules', 'venv', 'env', 'build', 'dist'}
     exclude_patterns = [
         '*.o', '*.pyc', '*.class', '*.log', '*.tmp', '*.temp', '*.swp', '*.swo',
@@ -37,6 +40,10 @@ if __name__ == "__main__":
         '*.so', '*.dylib', '*.a', '*.obj', '*.db', '*.jar', '.gitignore', '.env',
         '*.pid', '*.out', '*.toc', '*.aux', '*.bbl', '*.blg',
     ]
+
+    # Add user-specified exclusions
+    exclude_dirs.update(args.exclude_dirs)
+    exclude_patterns.extend(args.exclude_patterns)
 
     tree = generate_tree(project_root, exclude_dirs, exclude_patterns)
     
@@ -48,3 +55,5 @@ if __name__ == "__main__":
         f.write(tree)
     
     print(f"File hierarchy has been saved to '{output_file}'")
+    print(f"Excluded directories (exact names): {', '.join(exclude_dirs)}")
+    print(f"Excluded patterns (files and directories): {', '.join(exclude_patterns)}")
