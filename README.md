@@ -1,6 +1,6 @@
 # File Hierarchy Generator
 
-This tool generates a visual representation of your project's file structure. It's particularly useful for providing context to AI language models like Claude about how your project files are organized.
+Implementation of the tree cmd
 
 ## Features
 
